@@ -1,0 +1,26 @@
+---
+title: "DSHB Capstone"
+author: "Liam Smith-Becker, Andi Donnelly"
+date: "2024-10-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(httr)
+library(readxl)
+library(knitr)
+library(tidyverse)
+library(janitor)
+```
+
+
+```{r}
+GET("https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2021_c20240716.csv.gz", write_disk("2021_details.csv.gz", overwrite = TRUE))
+
+df_2021 <- read.csv(gzfile("2021_details.csv.gz"))
+
+GET("https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/StormEvents_details-ftp_v1.0_d2019_c20240117.csv.gz", write_disk("2019_details.csv.gz", overwrite = TRUE))
+
+df_2019 <- read.csv(gzfile("2019_details.csv.gz"))
+```
+
