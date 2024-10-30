@@ -129,7 +129,6 @@ insurance_2019$renters_rank <- as.numeric(insurance_2019$renters_rank)
 
 
 ```{r}
-glimpse(insurance_combined_2019)
 insurance_combined_2019 <- insurance_2019 %>%
   rename(Homeowner_price_2019 = homeowners_avg_premium, Renter_price_2019 = renters_avg_premium) %>%
   inner_join(insurance_2021 %>%
@@ -161,5 +160,112 @@ ggplot(insurance_combined_2019, aes(x = reorder(state, Renter_price_change), y =
 
 
 ```
+```{r}
+insurance_2020 <- read_xlsx("avg_premium_by_state_2020.xlsx")
 
+insurance_2020 <- insurance_2020 %>%
+  rename(
+    state = State,
+    homeowners_avg_premium = homeowner,
+    homeowners_rank = home_rank,
+    renters_avg_premium = renter,
+    renters_rank = `renter rank`
+)
+
+insurance_2020 <- insurance_2020 %>%
+  mutate(renters_avg_premium = str_trim(renters_avg_premium)) |>  
+  mutate(homeowners_avg_premium = str_trim(homeowners_avg_premium)) |> 
+  mutate(homeowners_avg_premium = str_remove_all(homeowners_avg_premium, ",")) |> 
+  mutate(renters_avg_premium = str_remove_all(renters_avg_premium, ","))
+
+glimpse(insurance_2020)
+insurance_2020$homeowners_avg_premium <- as.numeric(insurance_2020$homeowners_avg_premium)
+insurance_2020$homeowners_rank <- as.numeric(insurance_2020$homeowners_rank)
+insurance_2020$renters_avg_premium <- as.numeric(insurance_2020$renters_avg_premium)
+insurance_2020$renters_rank <- as.numeric(insurance_2020$renters_rank)
+
+insurance_2020$state <- insurance_2021$state
+glimpse(insurance_2020)
+```
+
+```{r}
+insurance_2018 <- read_xlsx("avg_premium_by_state_2018.xlsx")
+
+insurance_2018 <- insurance_2018 %>%
+  rename(
+    state = State,
+    homeowners_avg_premium = `homeowner price`,
+    homeowners_rank = `home _rank`,
+    renters_avg_premium = `renter price`,
+    renters_rank = `renter rank`
+)
+
+insurance_2018 <- insurance_2018 %>%
+  mutate(renters_avg_premium = str_trim(renters_avg_premium)) |>  
+  mutate(homeowners_avg_premium = str_trim(homeowners_avg_premium)) |> 
+  mutate(homeowners_avg_premium = str_remove_all(homeowners_avg_premium, ",")) |> 
+  mutate(renters_avg_premium = str_remove_all(renters_avg_premium, ","))
+
+glimpse(insurance_2018)
+insurance_2018$homeowners_avg_premium <- as.numeric(insurance_2018$homeowners_avg_premium)
+insurance_2018$homeowners_rank <- as.numeric(insurance_2018$homeowners_rank)
+insurance_2018$renters_avg_premium <- as.numeric(insurance_2018$renters_avg_premium)
+insurance_2018$renters_rank <- as.numeric(insurance_2018$renters_rank)
+
+insurance_2018$state <- insurance_2021$state
+glimpse(insurance_2020)
+```
+
+```{r}
+total_insurance_2018_2021 <- insurance_2018 %>%
+  select(state, 
+         homeowner_2018 = homeowners_avg_premium, 
+         renter_2018 = renters_avg_premium) %>%
+  full_join(
+    insurance_2019 %>%
+      select(state, 
+             homeowner_2019 = homeowners_avg_premium, 
+             renter_2019 = renters_avg_premium),
+    by = "state"
+  ) %>%
+  full_join(
+    insurance_2020 %>%
+      select(state, 
+             homeowner_2020 = homeowners_avg_premium, 
+             renter_2020 = renters_avg_premium),
+    by = "state"
+  ) %>%
+  full_join(
+    insurance_2021 %>%
+      select(state, 
+             homeowner_2021 = homeowners_avg_premium, 
+             renter_2021 = renters_avg_premium),
+    by = "state"
+  )
+
+texas_2018_2021 <- total_insurance_2018_2021 |>  filter(total_insurance_2018_2021$state == "Texas (6)")
+```
+
+```{r}
+texas_long <- total_insurance_2018_2021 %>%
+  filter(state == "Texas (6)") %>%
+  pivot_longer(
+    cols = starts_with("homeowner"),
+    names_to = "year",
+    values_to = "homeowner_price"
+  ) %>%
+  mutate(year = str_extract(year, "\\d+")) # Extract the year from the column names
+
+# Plot the data
+ggplot(texas_long, aes(x = year, y = homeowner_price, group = 1)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(
+    title = "Change in Homeowner Insurance Price for Texas (2018-2021)",
+    x = "Year",
+    y = "Homeowner Insurance Price"
+  ) +
+  theme_minimal()
+
+```
 
