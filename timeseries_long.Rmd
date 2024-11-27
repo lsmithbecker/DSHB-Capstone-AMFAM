@@ -122,6 +122,9 @@ state_freq
 ```
 
 
+
+
+
 ```{r}
 state_freq_long <- state_freq %>%
   pivot_longer(cols = starts_with("freq_"), names_to = "Year", values_to = "Frequency")
@@ -216,42 +219,42 @@ ggplot(state_start_end, aes(x = factor(year), y = Frequency, group = state, colo
 ##--------------- storm -------------
 ```{r}
 
-table(t_1996$event_type)
-table(t_1997$event_type)
-table(t_1998$event_type)
-table(t_1999$event_type)
-table(t_2000$event_type)
-table(t_2001$event_type)
-table(t_2002$event_type)
-table(t_2003$event_type)
-table(t_2004$event_type)
-table(t_2005$event_type)
-table(t_2006$event_type)
-table(t_2007$event_type)
-table(t_2008$event_type)
-table(t_2009$event_type)
-table(t_2010$event_type)
-table(t_2011$event_type)
-table(t_2012$event_type)
-table(t_2013$event_type)
-table(t_2014$event_type)
-table(t_2015$event_type)
-table(t_2016$event_type)
-table(t_2017$event_type)
-table(t_2018$event_type)
-table(t_2019$event_type)
-table(t_2020$event_type)
-table(t_2021$event_type)
+# table(t_1996$event_type)
+# table(t_1997$event_type)
+# table(t_1998$event_type)
+# table(t_1999$event_type)
+# table(t_2000$event_type)
+# table(t_2001$event_type)
+# table(t_2002$event_type)
+# table(t_2003$event_type)
+# table(t_2004$event_type)
+# table(t_2005$event_type)
+# table(t_2006$event_type)
+# table(t_2007$event_type)
+# table(t_2008$event_type)
+# table(t_2009$event_type)
+# table(t_2010$event_type)
+# table(t_2011$event_type)
+# table(t_2012$event_type)
+# table(t_2013$event_type)
+# table(t_2014$event_type)
+# table(t_2015$event_type)
+# table(t_2016$event_type)
+# table(t_2017$event_type)
+# table(t_2018$event_type)
+# table(t_2019$event_type)
+# table(t_2020$event_type)
+# table(t_2021$event_type)
 ```
 
 
 ```{r}
-t_2011$event_type <- replace(t_2011$event_type, t_2011$event_type == "Hurricane", "Hurricane (Typhoon)")
-t_2017$event_type <- replace(t_2017$event_type, t_2017$event_type == "Hurricane", "Hurricane (Typhoon)")
-t_2018$event_type <- replace(t_2018$event_type, t_2018$event_type == "Hurricane", "Hurricane (Typhoon)")
-t_2019$event_type <- replace(t_2019$event_type, t_2019$event_type == "Hurricane", "Hurricane (Typhoon)")
-t_2020$event_type <- replace(t_2020$event_type, t_2020$event_type == "Hurricane", "Hurricane (Typhoon)")
-t_2021$event_type <- replace(t_2021$event_type, t_2021$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2011$event_type <- replace(t_2011$event_type, t_2011$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2017$event_type <- replace(t_2017$event_type, t_2017$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2018$event_type <- replace(t_2018$event_type, t_2018$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2019$event_type <- replace(t_2019$event_type, t_2019$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2020$event_type <- replace(t_2020$event_type, t_2020$event_type == "Hurricane", "Hurricane (Typhoon)")
+# t_2021$event_type <- replace(t_2021$event_type, t_2021$event_type == "Hurricane", "Hurricane (Typhoon)")
 ```
 
 ```{r}
@@ -331,6 +334,18 @@ ggplot(storm_freq_long, aes(x = Year, y = event_type, fill = Frequency)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 ```
+
+
+```{r}
+storm_freq_ordered <- storm_freq_long %>%
+  group_by(event_type) %>%
+  summarise(Frequency = sum(Frequency, na.rm = TRUE)) %>%
+  arrange(desc(Frequency))
+
+print(storm_freq_ordered)
+
+```
+
 
 ```{r}
 state_freq_short <- bind_rows(
