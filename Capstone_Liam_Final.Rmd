@@ -1,0 +1,446 @@
+---
+title: "Capstone"
+author: "Liam Smith-Becker, Andi Donnelly"
+date: "2024-11-26"
+output: html_document
+---
+First we need to start with loading in our libraries
+```{r setup, include=FALSE}
+library(httr)
+library(readxl)
+library(knitr)
+library(tidyverse)
+library(janitor)
+library(psych)
+library(dplyr)
+library(janitor)
+library(ggthemes)
+library(ggplot2)
+library(corrplot)
+library(tidyr)
+library(maps)
+library(scales)
+library(plotly)
+library(gganimate)
+library(broom)
+library(Matrix)
+library(lme4)
+library(viridis)
+library(stringr)
+library(corrplot)
+library(plotly)
+```
+
+```{r, eval=FALSE}
+t_2007 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2007_c20240216.csv.gz")) %>% janitor::clean_names()
+t_2008 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2008_c20240620.csv.gz")) %>% janitor::clean_names()
+t_2009 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2009_c20231116.csv.gz")) %>% janitor::clean_names()
+t_2010 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2010_c20220425.csv.gz")) %>% janitor::clean_names()
+t_2011 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2011_c20230417.csv.gz")) %>% janitor::clean_names()
+t_2012 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2012_c20221216.csv.gz")) %>% janitor::clean_names()
+t_2013 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2013_c20230118.csv.gz")) %>% janitor::clean_names()
+t_2014 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2014_c20231116.csv.gz")) %>% janitor::clean_names()
+t_2015 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2015_c20240716.csv.gz")) %>% janitor::clean_names()
+t_2016 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2016_c20220719.csv.gz")) %>% janitor::clean_names()
+t_2017 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2017_c20230317.csv.gz")) %>% janitor::clean_names()
+t_2018 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2018_c20240716.csv.gz")) %>% janitor::clean_names()
+t_2019 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2019_c20240117.csv.gz")) %>% janitor::clean_names()
+t_2020 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2020_c20240620.csv.gz")) %>% janitor::clean_names()
+t_2021 <- read.csv(gzfile("storm_data/StormEvents_details-ftp_v1.0_d2021_c20240716 (1).csv.gz")) %>% janitor::clean_names()
+
+```
+
+Now we are going to load in our data. These RDS files were created by us and hold all the Storm Events and Insurance data that we are using.
+
+```{r}
+list2env(readRDS('InsuranceData.rds'), envir = environment())
+list2env(readRDS('StormData.rds'), envir = environment())
+```
+
+In here I work on creating a function to clean up the insurance data, standardizing the names of the columns, along with the states for each year
+
+```{r}
+years <- 2007:2021
+
+insurance_state <- lapply(years, function(year) {
+  temps_insurance <- paste0("insurance_", year)
+  
+  if (exists(temps_insurance)) {
+    temp_df <- get(temps_insurance)
+    
+    colnames(temp_df) <- c("state", "homeowner_price", "homeowner_rank", "renter_price", "renter_rank")
+    
+    temp_df <- temp_df %>%
+      select(state, homeowner_price) %>%
+      mutate(state = str_trim(state),
+             state = str_remove_all(state, "\\s*\\(\\d+\\)"))
+ 
+    colnames(temp_df)[2] <- paste0("homeowner_price_", year)
+    return(temp_df)
+  } else {
+    cat(paste("Data frame", temps_insurance, "does not exist. Skipping.\n"))
+    return(NULL)
+  }
+})
+
+insurance_state <- Filter(Negate(is.null), insurance_state)
+state_insurance_homeowner_price <- Reduce(function(x, y) merge(x, y, by = "state", all = TRUE), insurance_state)
+```
+
+Now here I started doing some EDA on the data. Here I wanted to start looking at an animation showing the change of Insuranfe prices over time. Included in here is an option to save the animation as a gif.
+
+```{r}
+state_insurance_homeowner_long <- state_insurance_homeowner_price %>%
+  pivot_longer(
+    cols = starts_with("homeowner_price_"),
+    names_to = "year",
+    names_prefix = "homeowner_price_",
+    values_to = "homeowner_price"
+  ) %>%
+  mutate(year = as.integer(year))
+
+state_insurance_homeowner_long <- state_insurance_homeowner_long %>%
+  group_by(year) %>%
+  mutate(state = reorder(state, -homeowner_price)) %>%
+  ungroup()
+
+insurance_animation <- ggplot(state_insurance_homeowner_long, 
+                               aes(x = state, y = homeowner_price, fill = state)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(
+    title = "Homeowner Insurance Prices by State",
+    subtitle = "Year: {frame_time}",
+    x = "State",
+    y = "Homeowner Insurance Price",
+    caption = "Source: Insurance Data"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    axis.title.x = element_blank()
+  ) +
+  transition_time(year) +
+  ease_aes('linear')
+
+animated_gif = animate(insurance_animation, nframes = 100, fps = 10, width = 800, height = 600)
+animated_gif
+
+#anim_save("insurance_animation.gif", animation = animated_gif) 
+```
+
+Here is where I start to look at the Storm Events Data, using a similar cleaning method as before, but from Andi. We remove some states and regions that are not present in our insurance data. Here also we generate state frequency dataframes, in order to examine the count of storm events for each state for a given year, along with pivoting the data into a long format.
+
+```{r}
+states_to_remove <- c("AMERICAN SAMOA", "ATLANTIC NORTH", "ATLANTIC SOUTH", "DISTRICT OF COLUMBIA", "d.c.", "E PACIFIC", "GULF OF ALASKA", "GULF OF MEXICO", "GUAM", "HAWAII WATERS", "LAKE ERIE", "LAKE HURON", "LAKE MICHIGAN", "LAKE ONTARIO", "LAKE ST CLAIR", "LAKE SUPERIOR", "PUERTO RICO", "ST LAWRENCE R", "VIRGIN ISLANDS", " ", "Kentucky", "")
+
+years <- 2007:2021
+
+for (year in years) {
+  df_name <- paste0("t_", year)
+  
+
+  if (exists(df_name)) {
+    assign(df_name, get(df_name)[!get(df_name)$state %in% states_to_remove, ])
+  } else {
+    cat(paste("Data frame", df_name, "does not exist.\n"))}}
+
+
+generate_state_freq <- function(data, year) {
+  state_freq <- as.data.frame(table(data$state))
+  colnames(state_freq) <- c("value", paste0("freq_", year))
+  print(state_freq)
+  return(state_freq)
+}
+
+
+statefreq_list <- lapply(2007:2021, function(year) {
+  data <- get(paste0("t_", year))
+  generate_state_freq(data, year)
+})
+
+
+names(statefreq_list) <- paste0("statefreq_", 2007:2021)
+
+
+for (year in 2007:2021) {
+  assign(paste0("statefreq_", year), generate_state_freq(get(paste0("t_", year)), year))
+}
+
+
+freq_state <- lapply(years, function(year) {
+  temps_storm <- paste0("statefreq_", year)
+  if (exists(temps_storm)) {
+    temp_df <- get(temps_storm)
+    
+    colnames(temp_df) <- c("state", paste0("freq_", year))
+    return(temp_df)
+  } else {
+    cat(paste("Data frame", temps_storm, "does not exist. Skipping.\n"))
+    return(NULL)}})
+
+freq_state <- Filter(Negate(is.null), freq_state)
+
+
+state_freq <- Reduce(function(x, y) merge(x, y, by = "state", all = TRUE), freq_state)
+
+state_freq
+
+state_freq_long <- state_freq %>%
+  pivot_longer(cols = starts_with("freq_"), names_to = "Year", values_to = "Frequency")
+
+state_freq_long
+```
+
+Here I standardize the naming of the state frequency long columns and rows, to match the insurance data. I need these names to be the same inorder to create a combined dataframe and to be able to do some analysis on the data, along with this I am removing the d.c. from the insurance data.
+```{r}
+state_freq_long <- state_freq_long %>%
+  mutate(state = tolower(state))
+state_insurance_homeowner_long <- state_insurance_homeowner_long |> rename(Year = year) 
+
+state_insurance_homeowner_long <- state_insurance_homeowner_long |> mutate(state = tolower(state))
+state_insurance_homeowner_long <- state_insurance_homeowner_long %>%
+  filter(state != "d.c.")
+
+state_freq_long <- state_freq_long %>%
+  mutate(Year = as.integer(str_remove(Year, "freq_")))
+
+
+state_insurance_homeowner_long
+state_freq_long
+```
+Now I start to combine the dataframes and create some plots looking at the relationship between frequency of storm events and homeowner insurance prices. I selected three years so that the plots are more visible, especially for presenting. These plots show that as the frequency of storm events increases, the homeowner insurance price also increased
+
+```{r}
+combined_df <- merge(state_insurance_homeowner_long, state_freq_long, by = c("state", "Year"))
+
+
+filtered_df <- combined_df %>%
+  filter(Year %in% c(2007, 2015, 2021))
+
+plot <- ggplot(filtered_df, aes(x = Frequency, y = homeowner_price, color = state)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, aes(group = year)) +  
+  facet_wrap(~ Year) +  
+  labs(
+    title = "Relationship Between Frequency and Homeowner Price",
+    x = "Frequency of Events",
+    y = "Homeowner Insurance Price"
+  ) +
+  theme_minimal() + theme(legend.position = "none")
+
+
+print(plot)
+```
+Now I start doing some correlations between homeowner price and storm frequency, along with some basic models looking at homeowner price and storm frequency. The correlations show that every single year has positive correlations between homeowner price and storm frequency.
+
+```{r}
+correlations <- combined_df %>%
+  group_by(Year) %>%
+  summarize(correlation = cor(Frequency, homeowner_price, use = "complete.obs"))
+print(correlations)
+
+cor_data <- combined_df %>% 
+  select(Frequency, homeowner_price, Year)
+
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+corrplot(cor_matrix, method = "circle", type = "upper", tl.col = "black")
+
+
+model <- lm(homeowner_price ~ Frequency + Year, data = combined_df)
+summary(model)
+
+
+```
+Now here I wanted to look and see if there was any correlations between the change in frequency and homeowner price, but this was inconclusive, especially compared to the previous correlations
+
+```{r}
+combined_df <- combined_df %>%
+  group_by(state) %>%
+  arrange(state, Year) %>%
+  mutate(freq_change = Frequency - lag(Frequency)) %>%  
+  ungroup()
+
+combined_df <- combined_df %>%
+  filter(Year != 2007)
+
+correlations <- combined_df %>%
+  group_by(Year) %>%
+  summarize(correlation = cor(freq_change, homeowner_price, use = "complete.obs"))
+print(correlations)
+
+```
+In this section I wanted to look at the property damage done by storms as a sort of proxy to storm severity. I looked specifically at 2007, and ran the models and the regression analysis to look at what happens with storm property damage and homeowners insurance prices.
+
+```{r}
+clean_damage_property <- function(df, column) {
+  df %>%
+    
+    filter(!is.na(!!sym(column)) & !!sym(column) != "" & !!sym(column) != "0") %>%
+    mutate(
+      
+      !!column := str_replace_all(!!sym(column), "K", "e3"),  
+      !!column := str_replace_all(!!sym(column), "M", "e6"), 
+      !!column := as.numeric(!!sym(column))
+    ) %>%
+    filter(!is.na(!!sym(column)) & !!sym(column) != 0)
+}
+
+t_2007_cleaned <- clean_damage_property(t_2007, "damage_property")
+
+head(t_2007_cleaned)
+
+t_2007_cleaned$damage_property <- as.numeric(t_2007_cleaned$damage_property)
+
+t_2007_agg <- t_2007_cleaned %>%
+  group_by(state) %>%
+  summarize(total_damage = sum(damage_property, na.rm = TRUE)) |> mutate(state = tolower(state))
+
+
+head(t_2007_agg)
+
+insurance_2007 <- insurance_2007 |> 
+  filter(State != "D.C.") |> 
+  mutate(state = tolower(State)) |> 
+  mutate(state = str_trim(state), state = str_remove_all(state, "\\s*\\(\\d+\\)")) |> 
+  mutate(homeowner_price = `Homeowner Price`)
+
+
+combined_data <- t_2007_agg %>%
+  left_join(insurance_2007, by = "state") |> select(c("state", "total_damage", "homeowner_price"))
+
+head(combined_data)
+
+cor(combined_data$total_damage, combined_data$homeowner_price, use = "complete.obs")
+
+
+ggplot(combined_data, aes(x = total_damage, y = homeowner_price, fill = state)) +
+  geom_point() +
+  labs(title = "Property Damage vs Homeowner Insurance Price",
+       x = "Total Property Damage",
+       y = "Homeowner Insurance Price") +
+  theme_minimal()
+
+model <- lm(homeowner_price ~ total_damage, data = combined_data)
+
+summary(model)
+
+ggplot(combined_data, aes(x = total_damage, y = homeowner_price)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Regression: Property Damage vs Homeowner Insurance Price",
+       x = "Total Property Damage",
+       y = "Homeowner Insurance Price") +
+  theme_minimal()
+
+```
+Here I made a little function to clean and apply the cleaning property damage function I made earlier.
+```{r}
+years <- 2007:2021
+
+data_list <- lapply(years, function(year) {
+  get(paste0("t_", year))  
+})
+
+cleaned_data_list <- lapply(data_list, function(df) {
+  clean_damage_property(df, "damage_property")
+})
+
+names(cleaned_data_list) <- paste0("t_", years, "_cleaned")
+
+t_2007_cleaned <- cleaned_data_list[[1]]
+
+```
+Now I start with cleaning the storm property damage and aggregating a total sum of all the property damage
+
+```{r}
+cleaned_data_with_year <- lapply(1:length(cleaned_data_list), function(i) {
+  cleaned_data_list[[i]] %>%
+    mutate(year = years[i])  
+})
+
+combined_data <- bind_rows(cleaned_data_with_year)
+total_damage_by_state <- combined_data %>%
+  group_by(state, year) %>%
+  summarize(total_damage = sum(damage_property, na.rm = TRUE))
+
+```
+Again here, I start combining the state insurance data along with the total damage done by storms. I need to clean the names and I decided to uppercase all the names of the states.
+
+```{r}
+total_damage_by_state <- total_damage_by_state %>%
+  rename(state = state, year = year)  
+
+state_insurance_homeowner_long <- state_insurance_homeowner_long %>%
+  rename(year = Year) 
+
+state_insurance_homeowner_long$state <- toupper(state_insurance_homeowner_long$state)
+total_damage_by_state$state <- toupper(total_damage_by_state$state)
+
+
+merged_data <- left_join(total_damage_by_state, state_insurance_homeowner_long, by = c("state", "year"))
+
+```
+
+Here I started making some models for looking at property damage done. I included one with random effects of state and one wtih out the random effects to look and see if there was any differences. Again I made a similar plotting style to the plots I made before, with a set of three visible, and as you can see there is a positive relationship between homeowner price and total property damage
+
+```{r, warning=FALSE}
+basemodel <- lm(homeowner_price ~ total_damage + state, data = merged_data)
+summary(basemodel)
+
+model <- lmer(homeowner_price ~ total_damage + (1 | state), data = merged_data)
+
+summary(model)
+
+filtered_data <- merged_data %>%
+  filter(year %in% c(2007, 2015, 2020))
+
+ggplot(filtered_data, aes(x = total_damage, y = homeowner_price, color = state)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, aes(group = year)) +  
+  facet_wrap(~ year) +
+  labs(title = "Relationship Between Property Damage and Homeowner Insurance Prices",
+       x = "Total Property Damage",
+       y = "Homeowner Insurance Price")+ theme_minimal() + theme(legend.position = "none") 
+
+```
+I wanted to look at some correlations by year averages overall, and saw that there was a positive correlation, but was very small.
+```{r}
+
+total_damage_by_state
+
+state_year_avg <- total_damage_by_state %>%
+  group_by(state, year) %>%
+  summarize(avg_damage = mean(total_damage), .groups = "drop")
+
+overall_year_avg <- total_damage_by_state %>%
+  group_by(year) %>%
+  summarize(overall_avg_damage = mean(total_damage), .groups = "drop")
+
+combined <- list(
+  State_Year_Avg = state_year_avg,
+  Overall_Year_Avg = overall_year_avg
+)
+
+state_year_avg
+overall_year_avg
+
+overall_corr <- cor(total_damage_by_state$year, total_damage_by_state$total_damage)
+overall_corr
+```
+
+```{r}
+t_2021_cleaned <- clean_damage_property(t_2021, "damage_property")
+
+head(t_2021_cleaned)
+
+t_2021_cleaned$damage_property <- as.numeric(t_2021_cleaned$damage_property)
+```
+
+
+
+
+
+
+
