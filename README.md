@@ -20,3 +20,4 @@ StormData.rds - This file is unable to be uploaded to github due to the size, it
 ```
 list2env(readRDS('StormData.rds'), envir = environment())
 ```
+OLD/ - This directory contains our previous work, mainly old rmd files that we created while working on this project, they are not clean or commented but we felt it might be useful to keep as we had some previous analysis and visualizations present in them.
