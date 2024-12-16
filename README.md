@@ -5,7 +5,7 @@ We worked on investigating the relationship between storm events and insurance p
 
 ## About the Data
 We used two main datasets, a storm events dataset sourced from the US Government, and an insurance dataset that was publicly available.
-Both are accessable here [https://www.iii.org/table-archive/21407](Insurance Data), [https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/](Storm Data)
+Both are accessable here (https://www.iii.org/table-archive/21407)[Insurance Data], (https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/)[Storm Data]
 
 ## About the Files
 insurance_final -- This file was created by Liam and mainly revolves around our final analysis of the insurance data, and the combined storm events and insurance data.
@@ -16,7 +16,7 @@ InsuranceData.rds -- This is an RDS file that contains all the insurance data af
 ```
 list2env(readRDS('InsuranceData.rds'), envir = environment())
 ```
-StormData.rds - This file is unable to be uploaded to github due to the size, it is currently hosted on google drive present [https://drive.google.com/drive/folders/1NFDMicIcYiGKQDGQttVJpDYl3gqOM4pT?usp=sharing](here). Using this code you can load it in yourself
+StormData.rds - This file is unable to be uploaded to github due to the size, it is currently hosted on google drive present (https://drive.google.com/drive/folders/1NFDMicIcYiGKQDGQttVJpDYl3gqOM4pT?usp=sharing)[here]. Using this code you can load it in yourself
 ```
 list2env(readRDS('StormData.rds'), envir = environment())
 ```
