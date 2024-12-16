@@ -5,7 +5,7 @@ We worked on investigating the relationship between storm events and insurance p
 
 ## About the Data
 We used two main datasets, a storm events dataset sourced from the US Government, and an insurance dataset that was publicly available.
-Both are accessable here (https://www.iii.org/table-archive/21407)[Insurance Data], (https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/)[Storm Data]
+Both are accessable here (https://www.iii.org/table-archive/21407) [Insurance Data], (https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/)[Storm Data]
 
 ## About the Files
 insurance_final -- This file was created by Liam and mainly revolves around our final analysis of the insurance data, and the combined storm events and insurance data.
